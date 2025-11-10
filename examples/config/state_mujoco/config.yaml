@@ -1,0 +1,31 @@
+defaults:
+  - _self_
+  - algo: td3
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+# experiment
+log_dir: "log"
+seed: 0
+debug: false
+name: debug
+device: null
+
+# env
+task: HalfCheetah-v5
+frame_skip: 1
+
+# train
+algo: ???
+buffer_size: 1000000
+batch_size: 512
+
+train_frames: 1000000
+warmup_frames: 5000
+random_frames: 5000
+eval_frames: 10000
+eval_episodes: 10
+log_frames: 1000
+
+norm_obs: false
+norm_reward: false

@@ -1,0 +1,13 @@
+**/__pycache__
+**/.vscode
+*.egg-info
+log*/
+.idea/
+**/*.ipynb
+out/
+wandb/
+ckpts/
+outputs/
+.cursor/
+MUJOCO_LOG.TXT
+shells

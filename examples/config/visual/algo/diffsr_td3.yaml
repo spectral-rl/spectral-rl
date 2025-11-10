@@ -1,0 +1,41 @@
+# @package _global_
+
+algo:
+  cls: diffsr_td3
+  tau: 0.01
+  actor_hidden_dim: 1024
+  actor_hidden_dims: [1024, 1024, ]
+  critic_hidden_dim: 1024
+  actor_lr: 0.0003
+  critic_lr: 0.0003
+  update_every: 2
+  var_coef: 0.1
+  recon_coef: 1.0
+  diffusion_coef: 1.0
+  critic_coef: 1.0
+  reward_coef: 10.0
+  x_min: -7.
+  x_max: 7.
+  sample_steps: 50
+  feature_dim: 512
+  embed_dim: 256
+  rff_dim: 1024
+  latent_dim: 256
+  ae_num_layers: 4
+  ae_num_filters: 32
+  phi_hidden_dims: [1024, 1024, 1024, 1024]
+  mu_hidden_dims: [1024, 1024, 1024, 1024]
+  critic_hidden_dims: [1024, ]
+  reward_hidden_dims: [1024, ]
+  extra_repr_step: 1
+  ae_lr: 0.0001
+  diffusion_lr: 0.0001
+  back_critic_grad: false
+  target_policy_noise: 0.2
+  noise_clip: 0.3
+  exploration_noise: 0.2
+  reg_coef: 0.00001
+  wd: 0.0001
+  encoder_tau: 0.01
+
+pretrain_steps: 10000

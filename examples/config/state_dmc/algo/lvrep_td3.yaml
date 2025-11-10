@@ -1,0 +1,33 @@
+# @package _global_
+
+algo:
+  cls: lvrep_td3
+  discount: 0.99
+  tau: 0.005 # hard update
+  actor_update_freq: 1
+  target_update_freq: 1
+  critic_hidden_dims: [512, 512, 512] # this is actually not used
+  actor_hidden_dims: [512, 512, 512]
+  critic_lr: 0.0003
+  actor_lr: 0.0003
+  target_policy_noise: 0.2
+  noise_clip: 0.3
+  exploration_noise: 0.2
+
+  # below are params specific to lvrep_td3
+  feature_dim: 512
+  feature_tau: 0.005
+  feature_update_ratio: 1
+  encoder_hidden_dims: [512, 512, 512]
+  decoder_hidden_dims: [512, 512, 512]
+  f_hidden_dims: [512, 512]
+  feature_lr: 0.0001
+  num_noise: 16
+  logstd_min: -20.0
+  logstd_max: 2.0
+  recon_coef: 1.0
+  kl_coef: 0.1
+  kl_balance: 0.5
+  reward_coef: 0.05
+
+norm_obs: true
