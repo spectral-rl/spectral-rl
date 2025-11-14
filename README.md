@@ -9,7 +9,7 @@
 
 # Spectral RL: Spectral Representations for Reinforcement Learning
 
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Website](https://img.shields.io/badge/Website-Visit-blue.svg)](https://haotiansun14.github.io/rl-rep-page/)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Website](https://img.shields.io/badge/Website-Visit-blue.svg)](https://spectral-rl.github.io)
 
 ![Spectral-RL Banner](./assets/images/banner.png)
 
