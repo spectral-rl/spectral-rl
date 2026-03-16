@@ -21,8 +21,10 @@ algo:
   feature_update_ratio: 1
   feature_dim: 512
   embed_dim: 128
-  psi_hidden_dims: [512, 512, 512]
-  zeta_hidden_dims: [512, 512, 512]
+  # psi_hidden_dims: [512, 512, 512]
+  # zeta_hidden_dims: [512, 512, 512]
+  phi_hidden_dims: [512, 512, 512]                                
+  mu_hidden_dims: [512, 512, 512]    
   critic_hidden_dims: [512, ]
   reward_hidden_dims: [512, ]
   rff_dim: 1024
