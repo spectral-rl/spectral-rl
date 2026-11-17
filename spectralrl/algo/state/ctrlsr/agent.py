@@ -5,8 +5,8 @@ import torch.nn as nn
 
 from spectralrl.algo.state.ctrlsr.network import FactorizedNCE
 from spectralrl.algo.state.td3.agent import TD3
-from spectralrl.module.actor import SquashedDeterministicActor
 from spectralrl.module.critic import RffDoubleQ
+from spectralrl.utils.balance import LossBalancer
 from spectralrl.utils.utils import convert_to_tensor, make_target, sync_target
 
 
@@ -26,6 +26,8 @@ class CtrlSR_TD3(TD3):
         self.ctrl_coef = cfg.ctrl_coef
         self.critic_coef = cfg.critic_coef
         self.feature_tau = cfg.feature_tau
+        # adaptive ctrl_coef, off when balance_ratio <= 0 (see LossBalancer)
+        self.balancer = LossBalancer.from_cfg(cfg)
 
         # feature networks
         self.nce = FactorizedNCE(
@@ -49,12 +51,7 @@ class CtrlSR_TD3(TD3):
         )
 
         # rl networks
-        self.actor = SquashedDeterministicActor(
-            input_dim=self.obs_dim,
-            output_dim=self.action_dim,
-            hidden_dims=cfg.actor_hidden_dims,
-            norm_layer=nn.LayerNorm
-        ).to(self.device)
+        self.actor = self.make_actor(cfg)
         self.critic = RffDoubleQ(
             feature_dim=cfg.feature_dim,
             hidden_dims=cfg.critic_hidden_dims,
@@ -85,6 +82,8 @@ class CtrlSR_TD3(TD3):
 
             critic_metrics, critic_loss = self.critic_step(obs, action, next_obs, reward, terminal)
             tot_metrics.update(critic_metrics)
+            if self.balancer.due(self._step):
+                tot_metrics.update(self.balance_coef(ctrl_loss, critic_loss))
 
             self.feature_optim.zero_grad()
             self.critic_optim.zero_grad()
@@ -108,6 +107,13 @@ class CtrlSR_TD3(TD3):
 
         self._step += 1
         return tot_metrics
+
+    def balance_coef(self, ctrl_loss, critic_loss):
+        """Adaptive ctrl_coef: balance_ratio * |g_td| / |g_nce| on the phi network (see LossBalancer).
+        The TD gradient on phi grows about 10x over training while the NCE gradient stays flat."""
+        self.ctrl_coef, g_nce, g_td = self.balancer.update(
+            ctrl_loss, critic_loss * self.critic_coef, list(self.nce.mlp_phi.parameters()))
+        return {"misc/ctrl_coef": self.ctrl_coef, "misc/g_nce_phi": g_nce, "misc/g_td_phi": g_td}
 
     def feature_step(self, obs, action, next_obs, reward):
         metrics, ctrl_loss, reward_loss = self.nce.compute_loss(obs, action, next_obs, reward)

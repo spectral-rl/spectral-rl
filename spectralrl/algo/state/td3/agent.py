@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 
 from spectralrl.algo.state.base import BaseStateAlgorithm
-from spectralrl.module.actor import SquashedDeterministicActor
-from spectralrl.module.critic import EnsembleQ
+from spectralrl.module.actor import SquashedDeterministicActor, SquashedDeterministicSimbaActor
+from spectralrl.module.critic import EnsembleQ, SimbaDoubleQ
 from spectralrl.utils.utils import convert_to_tensor, make_target, sync_target
 
 
@@ -30,19 +30,25 @@ class TD3(BaseStateAlgorithm):
         self.exploration_noise = cfg.exploration_noise
         self.feature_update_ratio = cfg.feature_update_ratio # this is for ablation
 
-        self.actor = SquashedDeterministicActor(
-            input_dim=self.obs_dim,
-            output_dim=self.action_dim,
-            hidden_dims=cfg.actor_hidden_dims,
-            norm_layer=nn.LayerNorm,
-        ).to(self.device)
-        self.critic = EnsembleQ(
-            input_dim=self.obs_dim+self.action_dim,
-            hidden_dims=cfg.critic_hidden_dims,
-            ensemble_size=2,
-            activation=nn.ELU,
-            norm_layer=nn.LayerNorm
-        ).to(self.device)
+        # network architecture: "mlp" (default) or "simba" (SimBa encoders, Lee et al., 2025; sized by
+        # actor_hidden_dim / actor_num_blocks and critic_hidden_dim / critic_num_blocks)
+        self.arch = cfg.get("arch", "mlp")
+        assert self.arch in ("mlp", "simba"), f"unknown arch {self.arch!r}"
+        self.actor = self.make_actor(cfg)
+        if self.arch == "simba":
+            self.critic = SimbaDoubleQ(
+                input_dim=self.obs_dim+self.action_dim,
+                hidden_dim=cfg.critic_hidden_dim,
+                num_blocks=cfg.critic_num_blocks,
+            ).to(self.device)
+        else:
+            self.critic = EnsembleQ(
+                input_dim=self.obs_dim+self.action_dim,
+                hidden_dims=cfg.critic_hidden_dims,
+                ensemble_size=2,
+                activation=nn.ELU,
+                norm_layer=nn.LayerNorm
+            ).to(self.device)
         self.actor_target = make_target(self.actor)
         self.critic_target = make_target(self.critic)
 
@@ -50,6 +56,21 @@ class TD3(BaseStateAlgorithm):
         self.critic_optim = torch.optim.Adam(self.critic.parameters(), lr=cfg.critic_lr)
 
         self._step = 0
+
+    def make_actor(self, cfg):
+        if self.arch == "mlp":
+            return SquashedDeterministicActor(
+                input_dim=self.obs_dim,
+                output_dim=self.action_dim,
+                hidden_dims=cfg.actor_hidden_dims,
+                norm_layer=nn.LayerNorm,
+            ).to(self.device)
+        return SquashedDeterministicSimbaActor(
+            input_dim=self.obs_dim,
+            output_dim=self.action_dim,
+            hidden_dim=cfg.actor_hidden_dim,
+            num_blocks=cfg.actor_num_blocks,
+        ).to(self.device)
 
     def train(self, training):
         self.actor.train(training)

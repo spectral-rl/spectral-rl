@@ -18,7 +18,7 @@
 ## 🎯 Key Features
 
 - **State-of-the-art Algorithms**: Implementation of 4 major spectral representation learning methods;
-- **Multi-environment Support**: Compatible with MuJoCo, DMControl, and MetaWorld tasks;
+- **Multi-environment Support**: Compatible with MuJoCo, DMControl, HumanoidBench, and MetaWorld tasks;
 - **Modular Design**: Easy-to-use, extensible framework built on popular model-free RL algorithms;
 - **Research-Ready**: Comprehensive evaluation tools and reproducible experiments.
 
@@ -49,6 +49,15 @@ cd spectral-rl
 pip install -e .
 ```
 
+### Optional: HumanoidBench
+[HumanoidBench](https://github.com/carlosferrazza/humanoid-bench) pins `gymnasium==0.29.1` and `mujoco==3.1.6`, which conflict with the versions used here, but it runs fine on them, so install it without its dependencies:
+```bash
+git clone https://github.com/carlosferrazza/humanoid-bench && cd humanoid-bench
+git checkout cb1189039151c8aadaaa987b442da54383c87fab
+pip install --no-deps -e .   # editable: its sub-packages have no __init__.py
+pip install "jax[cpu]"       # imported by humanoid_bench even for tasks that do not use it
+```
+
 ## 🔧 Usage
 
 ### Directory Structure
@@ -57,6 +66,7 @@ examples/
 ├── config/           # Configuration files for experiments
 ├── main_state_dmc.py # DMControl with proprioceptive states
 ├── main_state_mujoco.py     # Gym-MuJoCo environments
+├── main_state_humanoidbench.py  # HumanoidBench (e.g. h1-walk-v0)
 └── main_visual.py    # MetaWorld and visual DMControl
 ```
 
@@ -65,6 +75,7 @@ examples/
 #### Basic Usage
 ```bash
 python examples/main_state_dmc.py algo=<algorithm_name> task=<task_name>
+python examples/main_state_humanoidbench.py algo=<algorithm_name> task=h1-walk-v0
 ```
 
 ## 📝 Citation

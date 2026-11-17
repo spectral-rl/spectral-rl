@@ -11,3 +11,5 @@ outputs/
 .cursor/
 MUJOCO_LOG.TXT
 shells
+.venv/
+analysis/

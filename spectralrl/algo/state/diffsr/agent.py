@@ -5,8 +5,8 @@ import torch.nn as nn
 
 from spectralrl.algo.state.diffsr.network import DDPM
 from spectralrl.algo.state.td3.agent import TD3
-from spectralrl.module.actor import SquashedDeterministicActor
 from spectralrl.module.critic import RffDoubleQ
+from spectralrl.utils.balance import LossBalancer
 from spectralrl.utils.utils import convert_to_tensor, make_target, sync_target
 
 
@@ -25,6 +25,8 @@ class DiffSR_TD3(TD3):
         self.diffusion_coef = cfg.diffusion_coef
         self.critic_coef = cfg.critic_coef
         self.reward_coef = cfg.reward_coef
+        # adaptive diffusion_coef, off when balance_ratio <= 0 (see LossBalancer)
+        self.balancer = LossBalancer.from_cfg(cfg)
 
         # diffusion
         self.diffusion = DDPM(
@@ -43,12 +45,7 @@ class DiffSR_TD3(TD3):
         self.feature_optim = torch.optim.Adam(self.diffusion.parameters(), lr=cfg.feature_lr)
 
         # rl network
-        self.actor = SquashedDeterministicActor(
-            input_dim=obs_dim,
-            output_dim=self.action_dim,
-            hidden_dims=cfg.actor_hidden_dims,
-            norm_layer=nn.LayerNorm
-        ).to(self.device)
+        self.actor = self.make_actor(cfg)
         self.critic = RffDoubleQ(
             feature_dim=self.feature_dim,
             hidden_dims=cfg.critic_hidden_dims,
@@ -79,6 +76,8 @@ class DiffSR_TD3(TD3):
 
             critic_metrics, critic_loss = self.critic_step(obs, action, next_obs, reward, terminal)
             tot_metrics.update(critic_metrics)
+            if self.balancer.due(self._step):
+                tot_metrics.update(self.balance_coef(diffusion_loss, critic_loss))
 
             self.feature_optim.zero_grad()
             self.critic_optim.zero_grad()
@@ -103,6 +102,13 @@ class DiffSR_TD3(TD3):
 
         self._step += 1
         return tot_metrics
+
+    def balance_coef(self, diffusion_loss, critic_loss):
+        """Adaptive diffusion_coef: balance_ratio * |g_td| / |g_diff| on the phi network, i.e. the
+        s / a embeddings and mlp_phi (see LossBalancer)."""
+        params = [p for n, p in self.diffusion.named_parameters() if n.split(".")[0] in ("mlp_s", "mlp_a", "mlp_phi")]
+        self.diffusion_coef, g_diff, g_td = self.balancer.update(diffusion_loss, critic_loss * self.critic_coef, params)
+        return {"misc/diffusion_coef": self.diffusion_coef, "misc/g_diff_phi": g_diff, "misc/g_td_phi": g_td}
 
     def feature_step(self, obs, action, next_obs, reward):
         feature_metrics, diffusion_loss, reward_loss = self.diffusion.compute_loss(obs, action, next_obs, reward)

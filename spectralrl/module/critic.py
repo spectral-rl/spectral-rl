@@ -6,6 +6,7 @@ import torch.nn as nn
 
 from spectralrl.module.net.basic import weight_init
 from spectralrl.module.net.mlp import MLP, EnsembleMLP
+from spectralrl.module.net.residual import SimbaEncoder
 
 ModuleType = Type[nn.Module]
 
@@ -157,3 +158,19 @@ class RffDoubleQ(nn.Module):
         q1 = self.net1(x)
         q2 = self.net2(x)
         return torch.stack([q1, q2], dim=0)
+
+
+class SimbaDoubleQ(nn.Module):
+    """Independent Q-networks on the (s, a) pair, each a SimBa encoder (see
+    ``spectralrl.module.net.residual``) followed by a linear output layer, as in SimBa."""
+    def __init__(self, input_dim: int, hidden_dim: int, num_blocks: int, num_q: int = 2) -> None:
+        super().__init__()
+        self.encoders = nn.ModuleList([SimbaEncoder(input_dim, hidden_dim, num_blocks) for _ in range(num_q)])
+        self.heads = nn.ModuleList([nn.Linear(hidden_dim, 1) for _ in range(num_q)])
+        for head in self.heads:
+            nn.init.orthogonal_(head.weight, gain=1.0)
+            nn.init.zeros_(head.bias)
+
+    def forward(self, obs, action):
+        x = torch.concat([obs, action], dim=-1)
+        return torch.stack([head(enc(x)) for enc, head in zip(self.encoders, self.heads)], dim=0)
