@@ -8,6 +8,7 @@ import torch.nn as nn
 from torch.distributions import Categorical, Normal
 
 from spectralrl.module.net.mlp import MLP, EnsembleMLP
+from spectralrl.module.net.residual import SimbaEncoder
 from spectralrl.utils.distributions import SquashedNormal
 
 ModuleType = Type[nn.Module]
@@ -417,3 +418,27 @@ class SquashedDeterministicActor(DeterministicActor):
         """
         action_prev_tanh = super().forward(obs)
         return torch.tanh(action_prev_tanh), None, {"pre_value": action_prev_tanh}
+
+
+class SquashedDeterministicSimbaActor(BaseActor):
+    """
+    Squashed deterministic actor on a SimBa encoder (see ``spectralrl.module.net.residual``):
+    tanh(W enc(obs) + b). Same interface as SquashedDeterministicActor.
+    """
+    def __init__(self, input_dim: int, output_dim: int, hidden_dim: int, num_blocks: int) -> None:
+        super().__init__()
+        self.actor_type = "SquashedDeterministicSimbaActor"
+        self.encoder = SimbaEncoder(input_dim, hidden_dim, num_blocks)
+        self.head = nn.Linear(self.encoder.output_dim, output_dim)
+        nn.init.orthogonal_(self.head.weight, gain=1.0)
+        nn.init.zeros_(self.head.bias)
+
+    def forward(self, obs: torch.Tensor, *args, **kwargs) -> torch.Tensor:
+        return self.head(self.encoder(obs))
+
+    def sample(self, obs: torch.Tensor, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
+        action_prev_tanh = self.forward(obs)
+        return torch.tanh(action_prev_tanh), None, {"pre_value": action_prev_tanh}
+
+    def evaluate(self, *args, **kwargs):
+        raise NotImplementedError("deterministic actor")

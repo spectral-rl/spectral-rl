@@ -71,3 +71,34 @@ class ResidualMLP(nn.Module):
         x = self.activation(x)
         x = self.fc2(x)
         return x
+
+
+class SimbaBlock(nn.Module):
+    """Pre-LN residual block with an inverted bottleneck (SimBa, Lee et al., 2025):
+    x + W2 relu(W1 LN(x)), W1: d -> expansion * d, W2: expansion * d -> d."""
+    def __init__(self, hidden_dim: int, expansion: int = 4):
+        super().__init__()
+        self.ln = nn.LayerNorm(hidden_dim)
+        self.fc1 = nn.Linear(hidden_dim, hidden_dim * expansion)
+        self.fc2 = nn.Linear(hidden_dim * expansion, hidden_dim)
+        for fc in (self.fc1, self.fc2):  # he_normal, as in the reference implementation
+            nn.init.kaiming_normal_(fc.weight, nonlinearity="relu")
+            nn.init.zeros_(fc.bias)
+
+    def forward(self, x):
+        return x + self.fc2(F.relu(self.fc1(self.ln(x))))
+
+
+class SimbaEncoder(nn.Module):
+    """SimBa encoder: linear embedding -> ``num_blocks`` SimbaBlocks -> LayerNorm (post-LN)."""
+    def __init__(self, input_dim: int, hidden_dim: int, num_blocks: int, expansion: int = 4):
+        super().__init__()
+        self.output_dim = hidden_dim
+        self.embed = nn.Linear(input_dim, hidden_dim)
+        nn.init.orthogonal_(self.embed.weight, gain=1.0)
+        nn.init.zeros_(self.embed.bias)
+        self.blocks = nn.Sequential(*[SimbaBlock(hidden_dim, expansion) for _ in range(num_blocks)])
+        self.ln = nn.LayerNorm(hidden_dim)
+
+    def forward(self, x):
+        return self.ln(self.blocks(self.embed(x)))

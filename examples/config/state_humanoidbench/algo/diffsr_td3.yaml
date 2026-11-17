@@ -1,0 +1,33 @@
+# @package _global_
+
+algo:
+  cls: diffsr_td3
+  discount: 0.99
+  tau: 0.005
+  actor_update_freq: 1
+  target_update_freq: 1
+  # critic_hidden_dims: [512, 512, 512] # this is actually not used
+  actor_hidden_dims: [512, 512, 512]
+  critic_lr: 0.0003
+  actor_lr: 0.0003
+  target_policy_noise: 0.2
+  noise_clip: 0.3
+  exploration_noise: 0.2
+
+  # below are params specific to diffsr_td3
+  sample_steps: 50
+  x_min: -10.0
+  x_max: 10.0
+  feature_update_ratio: 1
+  feature_dim: 512
+  embed_dim: 128
+  phi_hidden_dims: [512, 512, 512]
+  mu_hidden_dims: [512, 512, 512]
+  critic_hidden_dims: [512, ]
+  reward_hidden_dims: [512, ]
+  rff_dim: 1024
+  feature_lr: 0.0001
+  diffusion_coef: 1.0
+  reward_coef: 0.1
+  critic_coef: 1.0
+  back_critic_grad: false

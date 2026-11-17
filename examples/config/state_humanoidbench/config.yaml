@@ -1,0 +1,37 @@
+defaults:
+  - _self_
+  - algo: td3
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+# experiment
+log_dir: "log"
+seed: 0
+debug: false
+name: debug
+device: null
+
+# env
+# HumanoidBench locomotion with the H1 robot (no hands), using the protocol of public
+# single-environment off-policy implementations (e.g. SimbaV2): action repeat 2, episodes of
+# 1000 simulator steps (500 agent steps), 1M simulator steps of training.
+task: h1-walk-v0
+frame_skip: 2
+
+# train
+algo: ???
+buffer_size: 1000000
+batch_size: 512
+
+train_frames: 1000000
+warmup_frames: 10000
+random_frames: 10000
+eval_frames: 10000
+eval_episodes: 10
+log_frames: 1000
+
+# Shared by all algorithms so that TD3 and the spectral methods differ only in the algorithm
+# itself (on DMC the spectral configs turn observation normalisation on and TD3 leaves it off).
+# The algo configs here do not override these.
+norm_obs: true
+norm_reward: false
